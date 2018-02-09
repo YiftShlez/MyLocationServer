@@ -1,5 +1,6 @@
 package com.shlezy.locationserver;
 
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Scanner;
@@ -7,7 +8,7 @@ import java.io.IOException;
 import java.io.BufferedReader;
 import java.io.PrintWriter;
 import java.io.InputStreamReader;
-
+import java.net.UnknownHostException;
 public class Main
 {
 	private static final int port = 54326;
@@ -15,12 +16,12 @@ public class Main
 	int count = 0;
 	boolean running = true;
 	Scanner s = null;
-	String location = "32.2260517,35.1627933";
+	String location = "32.2260517;35.1627933";
 
 	public Main()
 	{
 		s = new Scanner(System.in);
-		System.out.println("Enter location in this format:\nlatitude,langitude\nor default");
+		System.out.println("Enter location in this format:\nlatitude;langitude\nor default");
 		String input = s.nextLine();
 		if (!input.equalsIgnoreCase("default"))
 		{
@@ -55,8 +56,15 @@ public class Main
 			}
 		};
 		close.start();
+		try
+		{
 		System.out
-				.println("Started server in address " + server.getInetAddress().getHostAddress() + " in port " + port);
+				.println("Started server in address " + InetAddress.getLocalHost() + " in port " + port);
+		}
+		catch (UnknownHostException uhe)
+		{
+			uhe.printStackTrace();
+		}
 		while (running)
 
 		{
@@ -66,7 +74,7 @@ public class Main
 				System.out.println("received client #" + count);
 				BufferedReader in = new BufferedReader(new InputStreamReader(client.getInputStream()));
 				PrintWriter out = new PrintWriter(client.getOutputStream(), true);
-				out.println("location;" + location);
+				out.println("check:" + location);
 				String line = in.readLine();
 				System.out.println("Received line from client #" + count + ": " + line);
 				out.close();
