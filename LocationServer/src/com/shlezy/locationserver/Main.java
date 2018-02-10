@@ -53,7 +53,7 @@ public class Main
 		close.start();
 		try
 		{
-			System.out.println("Started server in address " + InetAddress.getLocalHost() + " in port " + port);
+			System.out.println("Started server in address " + InetAddress.getLocalHost().getHostAddress() + " in port " + port);
 		} catch (UnknownHostException uhe)
 		{
 			uhe.printStackTrace();
@@ -118,18 +118,31 @@ public class Main
 						stop();
 					}
 					System.out.println("Received line from client #" + id + " IP " + clientIP + ": " + line);
-					//A result of a check location request
+					// A result of a check location request
 					if (line == null)
-						continue;
-					if (line.startsWith("locResult:"))
+					{
+						System.out.println("Closing connection");
+						try
+						{
+							in.close();
+							out.close();
+							client.close();
+						} catch (IOException ioe)
+						{
+							System.err.println("Error closing connection from client #" + id + " ip" + clientIP);
+							ioe.printStackTrace();
+						}
+						running = false;
+						clients.remove(client);
+					} else if (line.startsWith("locResult:"))
 					{
 						locationResult = line.substring(10);
 						isLocationTaskFinished = true;
 					}
-					//An option for closing the connection
+					// An option for closing the connection
 					else if (line.equals("exit"))
 					{
-						out.println("Closing connection");
+						System.out.println("Closing connection");
 						try
 						{
 							in.close();
@@ -144,21 +157,27 @@ public class Main
 						running = false;
 						ClientThread.this.stop();
 					}
-					//If the line starts with check: it means the client is checking for the location of other clients
+					// If the line starts with check: it means the client is checking for the
+					// location of other clients
 					else if (line.startsWith("check:"))
 					{
-						String [] params = line.substring(6).split(";");
-						//First two parameters are latitude and longitude
-						String clientLocation = params [0] + ";" + params [1];
+						String[] params = line.substring(6).split(";");
+						// First two parameters are latitude and longitude
+						String clientLocation = params[0] + ";" + params[1];
 						for (int i = 2; i < params.length; i++)
 						{
-							//All the other parameters are IP addresses of the client for result checking
-							String otherIP = params [i];
-							new Thread ()
+							// All the other parameters are IP addresses of the client for result checking
+							String otherIP = params[i];
+							new Thread()
 							{
-								public void run ()
+								public void run()
 								{
-									out.println ("locResult:" + otherIP + ";" + clients.get(otherIP).checkLocation(clientLocation));
+									ClientThread otherClient = clients.get(otherIP);
+									if (otherClient == null)
+										out.println("locResult:Error3");
+									else
+										out.println("locResult:" + otherIP + ";"
+												+ clients.get(otherIP).checkLocation(clientLocation));
 								}
 							}.start();
 						}
@@ -166,10 +185,14 @@ public class Main
 				}
 			}
 		};
+
 		/**
 		 * Constructor
-		 * @param client the socket of the client, received in ServerSocket.accept()
-		 * @param id the client ID
+		 * 
+		 * @param client
+		 *            the socket of the client, received in ServerSocket.accept()
+		 * @param id
+		 *            the client ID
 		 */
 		public ClientThread(Socket client, int id)
 		{
@@ -177,11 +200,14 @@ public class Main
 			this.id = id;
 			clientIP = client.getInetAddress().getHostAddress();
 		}
-		
+
 		/**
 		 * A function for checking the client's location
-		 * @param location a location to measure the distance from
-		 * @return the location if the distance from the location is less than 300 meters, or error message
+		 * 
+		 * @param location
+		 *            a location to measure the distance from
+		 * @return the location if the distance from the location is less than 300
+		 *         meters, or error message
 		 */
 		public String checkLocation(String location)
 		{
